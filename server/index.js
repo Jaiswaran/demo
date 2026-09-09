@@ -6,7 +6,8 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { z } = require('zod');
 const { PrismaClient } = require('@prisma/client');
-const { createObjectKey, uploadPrivateObject, signedDownloadUrl } = require('./storage');
+const { createObjectKey, createPreviewKey, uploadPrivateObject, signedDownloadUrl } = require('./storage');
+const { buildPreview } = require('./preview');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -129,11 +130,16 @@ app.post('/api/author/uploads', auth, requireRole('AUTHOR'), upload.single('file
     const detected = allowedTypes.get(req.file.mimetype) || (/\.epub$/i.test(req.file.originalname) ? 'EPUB' : /\.pdf$/i.test(req.file.originalname) ? 'PDF' : null);
     if (!detected) return res.status(415).json({ error: 'Only PDF and EPUB files are supported' });
     const key = createObjectKey({ authorId: req.user.id, originalName: req.file.originalname });
-    await uploadPrivateObject({ key, body: req.file.buffer, contentType: detected === 'PDF' ? 'application/pdf' : 'application/epub+zip' });
-    res.status(201).json({ objectKey: key, format: detected, bytes: req.file.size });
+    const preview = await buildPreview({ buffer: req.file.buffer, format: detected });
+    const previewKey = createPreviewKey({ authorId: req.user.id });
+    await Promise.all([
+      uploadPrivateObject({ key, body: req.file.buffer, contentType: detected === 'PDF' ? 'application/pdf' : 'application/epub+zip' }),
+      uploadPrivateObject({ key: previewKey, body: preview.body, contentType: preview.contentType })
+    ]);
+    res.status(201).json({ objectKey: key, previewKey, format: detected, bytes: req.file.size, previewPages: preview.pageCount });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Unable to store book file' });
+    res.status(422).json({ error: 'Unable to validate or generate preview for this book file' });
   }
 });
 
