@@ -4,15 +4,27 @@
   "private": true,
   "description": "BOOKSPHERE — fair marketplace for authors and readers",
   "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
     "android:add": "npx cap add android",
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",
-    "@capacitor/core": "^8.0.0"
+    "@capacitor/core": "^8.0.0",
+    "@prisma/client": "^6.15.0",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.0.0"
+    "@capacitor/cli": "^8.0.0",
+    "prisma": "^6.15.0"
   }
 }
