@@ -15,6 +15,10 @@ function createObjectKey({ authorId, originalName }) {
   return `books/${authorId}/${crypto.randomUUID()}.${extension}`;
 }
 
+function createPreviewKey({ authorId }) {
+  return `previews/${authorId}/${crypto.randomUUID()}.preview`;
+}
+
 async function uploadPrivateObject({ key, body, contentType }) {
   await client().send(new PutObjectCommand({
     Bucket: bucket,
@@ -26,8 +30,14 @@ async function uploadPrivateObject({ key, body, contentType }) {
   return key;
 }
 
+async function downloadPrivateObject(key) {
+  const response = await client().send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  if (!response.Body) throw new Error('Storage returned an empty object');
+  return Buffer.from(await response.Body.transformToByteArray());
+}
+
 async function signedDownloadUrl(key, expiresIn = 300) {
   return getSignedUrl(client(), new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn });
 }
 
-module.exports = { createObjectKey, uploadPrivateObject, signedDownloadUrl };
+module.exports = { createObjectKey, createPreviewKey, uploadPrivateObject, downloadPrivateObject, signedDownloadUrl };
