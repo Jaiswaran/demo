@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  READER
+  AUTHOR
+  ADMIN
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         Role       @default(READER)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  books        Book[]
+  readerPurchases Purchase[] @relation("ReaderPurchases")
+  authorPurchases Purchase[] @relation("AuthorPurchases")
+  reviews      Review[]
+}
+
+model Book {
+  id          String     @id @default(cuid())
+  authorId    String
+  title       String
+  description String
+  genre       String
+  price       Int
+  currency    String     @default("INR")
+  format      String
+  objectKey   String
+  previewKey  String?
+  published   Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  purchases   Purchase[]
+  reviews     Review[]
+  @@index([authorId])
+  @@index([genre])
+  @@index([published, createdAt])
+}
+
+model Purchase {
+  id          String   @id @default(cuid())
+  readerId    String
+  authorId    String
+  bookId      String
+  amount      Int
+  platformFee Int
+  currency    String   @default("INR")
+  provider    String?
+  providerId  String?  @unique
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  reader      User     @relation("ReaderPurchases", fields: [readerId], references: [id], onDelete: Restrict)
+  author      User     @relation("AuthorPurchases", fields: [authorId], references: [id], onDelete: Restrict)
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  @@index([readerId, createdAt])
+  @@index([authorId, createdAt])
+  @@index([bookId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  readerId  String
+  bookId    String
+  rating    Int
+  body      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  reader    User     @relation(fields: [readerId], references: [id], onDelete: Cascade)
+  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  @@unique([readerId, bookId])
+  @@index([bookId, createdAt])
+}
